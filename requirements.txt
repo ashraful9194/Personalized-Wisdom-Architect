@@ -7,3 +7,8 @@ pypdf
 gradio
 pyyaml
 litellm
+pinecone
+google-generativeai
+PyPDF2
+python-dotenv
+langchain-text-splitters

@@ -1,0 +1,51 @@
+# .github/workflows/daily_digest.yml
+
+name: Send Daily Wisdom Digest
+
+on:
+  # Allows to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+  # Runs the job automatically every day at 00:30 UTC (6:30 AM in Dhaka)
+  schedule:
+    - cron: '30 12 * * *'
+
+jobs:
+  build-and-send:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checks out repository's code so the job can access it
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Sets up the Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # can change this to  Python version
+
+      # Step 3: Installs all the necessary libraries from  requirements.txt file
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Runs  daily digest script
+      - name: Run the daily digest script
+        env:
+          # This securely passes  GitHub Secrets to the script
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python daily_digest.py
+
+      # Step 5: Commits the updated progress.json file back to  repository
+      - name: Commit and push progress file
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions-bot@github.com'
+          git add progress.json
+          # Check if there are changes to commit
+          git diff --staged --quiet || git commit -m "Update progress.json for daily digest"
+          git push

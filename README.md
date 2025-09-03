@@ -47,6 +47,67 @@ This project leverages a powerful stack to bring your reading to life:
 
 ---
 
+## Book Ingestion Script
+
+The project now includes a robust book ingestion script (`ingest_book.py`) that processes PDF books and stores them in a Pinecone vector database for semantic search and retrieval.
+
+### Setup
+
+1. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Environment Variables:**
+   Create a `.env` file in the project root with the following variables:
+   ```
+   PINECONE_API_KEY=your_pinecone_api_key_here
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+
+3. **Pinecone Setup:**
+   - Sign up for Pinecone at https://www.pinecone.io/
+   - Create a new project in the AWS ap-south-1 region
+   - Get your API key from the Pinecone console
+
+4. **Google Gemini Setup:**
+   - Get your API key from Google AI Studio: https://makersuite.google.com/app/apikey
+
+### Usage
+
+1. **Place your PDF book** in the project directory as `book.pdf` (or modify the path in the script)
+
+2. **Run the ingestion script:**
+   ```bash
+   python ingest_book.py
+   ```
+
+The script will:
+- Create a Pinecone index named "wisdom-architect" if it doesn't exist
+- Extract all text from the PDF using PyPDF2
+- Use Gemini AI to create thematic chunks of the content
+- Generate vector embeddings for each chunk using Gemini's embedding model
+- Store the chunks in Pinecone with metadata including book title and chunk number
+
+### Features
+
+- **Automatic Index Creation:** Creates Pinecone index with proper specifications for text-embedding-004 model
+- **Thematic Chunking:** Uses AI to intelligently split book content into meaningful chunks
+- **Robust Error Handling:** Includes fallback chunking and comprehensive error handling
+- **Progress Tracking:** Clear console output showing processing progress
+- **Metadata Storage:** Stores rich metadata with each vector for better retrieval
+
+### Output
+
+The script provides detailed console output including:
+- Index creation status
+- PDF processing progress
+- Chunk creation statistics
+- Upload progress for each chunk
+- Final summary of processed content
+
+---
+
 ## ⚙️ Getting Started
 
 *(This section would be updated to include instructions on configuring email settings.)*
