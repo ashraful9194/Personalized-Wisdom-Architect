@@ -3,6 +3,8 @@ import json
 import smtplib
 import sys
 from email.message import EmailMessage
+from email.header import Header
+from email.utils import formataddr
 from dotenv import load_dotenv
 import google.generativeai as genai
 from pinecone import Pinecone
@@ -39,12 +41,17 @@ def save_progress(progress_data):
 def send_email(subject, body):
     """Sends the daily digest email using smtplib. Raises on failure."""
     try:
+        # Normalize problematic whitespace in subject/body (e.g., non‑breaking spaces)
+        safe_subject = (subject or "Your Daily Wisdom Digest").replace("\xa0", " ")
+        safe_body = (body or "").replace("\xa0", " ")
+
         msg = EmailMessage()
-        msg["Subject"] = subject
+        # UTF-8 aware subject header
+        msg["Subject"] = str(Header(safe_subject, "utf-8"))
         msg["From"] = SENDER_EMAIL
         msg["To"] = RECEIVER_EMAIL
         # Ensure UTF-8 content handling with safe transfer encoding
-        msg.set_content(body or "", subtype="plain", charset="utf-8", cte="quoted-printable")
+        msg.set_content(safe_body, subtype="plain", charset="utf-8", cte="quoted-printable")
 
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.ehlo()
