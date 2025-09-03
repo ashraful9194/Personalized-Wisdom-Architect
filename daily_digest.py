@@ -43,13 +43,21 @@ def send_email(subject, body):
         msg["Subject"] = subject
         msg["From"] = SENDER_EMAIL
         msg["To"] = RECEIVER_EMAIL
-        # Ensure UTF-8 content handling
-        msg.set_content(body or "", subtype="plain", charset="utf-8")
+        # Ensure UTF-8 content handling with safe transfer encoding
+        msg.set_content(body or "", subtype="plain", charset="utf-8", cte="quoted-printable")
 
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
             server.starttls()
+            server.ehlo()
             server.login(SENDER_EMAIL, GMAIL_APP_PASSWORD)
-            server.send_message(msg)
+            # Use SMTPUTF8 when body contains non-ASCII
+            mail_opts = []
+            try:
+                (body or "").encode("ascii")
+            except UnicodeEncodeError:
+                mail_opts = ["SMTPUTF8"]
+            server.send_message(msg, mail_options=mail_opts)
         print("✅ Email sent successfully!")
     except Exception as e:
         # Propagate to caller so CI can fail
