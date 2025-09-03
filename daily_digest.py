@@ -1,6 +1,8 @@
 import os
 import json
 import smtplib
+import sys
+from email.message import EmailMessage
 from dotenv import load_dotenv
 import google.generativeai as genai
 from pinecone import Pinecone
@@ -35,16 +37,23 @@ def save_progress(progress_data):
         json.dump(progress_data, f)
 
 def send_email(subject, body):
-    """Sends the daily digest email using smtplib."""
-    message = f"Subject: {subject}\n\n{body}"
+    """Sends the daily digest email using smtplib. Raises on failure."""
     try:
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = SENDER_EMAIL
+        msg["To"] = RECEIVER_EMAIL
+        # Ensure UTF-8 content handling
+        msg.set_content(body or "", subtype="plain", charset="utf-8")
+
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
             server.login(SENDER_EMAIL, GMAIL_APP_PASSWORD)
-            server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, message.encode('utf-8'))
+            server.send_message(msg)
         print("✅ Email sent successfully!")
     except Exception as e:
-        print(f"❌ Failed to send email: {e}")
+        # Propagate to caller so CI can fail
+        raise RuntimeError(f"Failed to send email: {e}")
 
 def main():
     """Main function to generate and send the daily digest."""
@@ -159,6 +168,8 @@ Produce these sections (plain text, no markdown formatting beyond headings):
 
     except Exception as e:
         print(f"❌ A fatal error occurred: {e}")
+        # Exit non-zero so GitHub Actions job fails
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
