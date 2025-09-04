@@ -41,9 +41,9 @@ def save_progress(progress_data):
 def send_email(subject, body):
     """Sends the daily digest email using smtplib. Raises on failure."""
     try:
-        # Normalize problematic whitespace in subject/body (e.g., non‑breaking spaces)
-        safe_subject = (subject or "Your Daily Wisdom Digest").replace("\xa0", " ")
-        safe_body = (body or "").replace("\xa0", " ")
+        # Minimal handling; rely on UTF-8 headers/body and SMTPUTF8
+        safe_subject = subject or "Your Daily Wisdom Digest"
+        safe_body = body or ""
 
         msg = EmailMessage()
         # UTF-8 aware subject header
@@ -59,13 +59,8 @@ def send_email(subject, body):
             server.starttls()
             server.ehlo()
             server.login(SENDER_EMAIL, GMAIL_APP_PASSWORD)
-            # Use SMTPUTF8 when body contains non-ASCII
-            mail_opts = []
-            try:
-                (body or "").encode("ascii")
-            except UnicodeEncodeError:
-                mail_opts = ["SMTPUTF8"]
-            server.send_message(msg, mail_options=mail_opts)
+            # Always request SMTPUTF8 to allow UTF-8 in headers/body
+            server.send_message(msg, mail_options=["SMTPUTF8"])
         print("✅ Email sent successfully!")
     except Exception as e:
         # Propagate to caller so CI can fail
