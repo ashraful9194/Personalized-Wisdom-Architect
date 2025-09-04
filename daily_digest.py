@@ -3,6 +3,7 @@ import json
 import smtplib
 import sys
 from email.message import EmailMessage
+from email import policy
 from email.header import Header
 from email.utils import formataddr
 from dotenv import load_dotenv
@@ -45,9 +46,10 @@ def send_email(subject, body):
         safe_subject = subject or "Your Daily Wisdom Digest"
         safe_body = body or ""
 
-        msg = EmailMessage()
-        # UTF-8 aware subject header
-        msg["Subject"] = str(Header(safe_subject, "utf-8"))
+        # Use SMTPUTF8 policy to allow UTF-8 in headers/body
+        msg = EmailMessage(policy=policy.SMTPUTF8)
+        # Lightly sanitize subject to avoid non-breaking space in headers
+        msg["Subject"] = (safe_subject or "Your Daily Wisdom Digest").replace("\xa0", " ")
         msg["From"] = SENDER_EMAIL
         msg["To"] = RECEIVER_EMAIL
         # Ensure UTF-8 content handling with safe transfer encoding
