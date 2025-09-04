@@ -1,5 +1,7 @@
 # 🧠 My Personalized Wisdom Architect
 
+![Status: MVP Operational](https://img.shields.io/badge/status-MVP_Operational-brightgreen) ![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg) ![Automation](https://img.shields.io/github/actions/workflow/status/ashraful9194/PDF-Reader-Agent/daily_digest.yml?label=Daily%20Digest&style=flat-square) ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+
 ### Why I Built This
 
 Like many people, I have a large collection of self-help and non-fiction PDF books on my hard drive that I've always wanted to read. I found it difficult to make consistent progress, and the sheer volume was overwhelming. So, I decided to build a solution for myself.
