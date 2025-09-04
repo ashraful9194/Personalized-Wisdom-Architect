@@ -8,7 +8,7 @@ on:
 
   # Runs the job automatically every day at 00:30 UTC (6:30 AM in Dhaka)
   schedule:
-    - cron: '30 12 * * *'
+    - cron: '30 10 * * *'
 
 jobs:
   build-and-send:
