@@ -53,7 +53,6 @@ def send_email(subject, body):
         # Ensure UTF-8 content handling with safe transfer encoding
         msg.set_content(safe_body, subtype="plain", charset="utf-8", cte="quoted-printable")
 
-        print(msg)
 
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.ehlo()

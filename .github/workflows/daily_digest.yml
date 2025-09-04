@@ -36,6 +36,11 @@ jobs:
       # Step 4: Runs  daily digest script
       - name: Run the daily digest script
         env:
+          # Ensure UTF-8 everywhere in CI to avoid ascii codec errors
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
+          LC_ALL: "C.UTF-8"
+          LANG: "C.UTF-8"
           # This securely passes  GitHub Secrets to the script
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
