@@ -1,128 +1,124 @@
-# 📖 ReadEaser: Your AI-Powered Reading Companion
+# 🧠 My Personalized Wisdom Architect
 
-![Status: In Development](https://img.shields.io/badge/status-in_development-blue)
-![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)
-![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+### Why I Built This
 
-Feeling overwhelmed by your digital reading list? ReadEaser is an intelligent agent designed to help you conquer those unread books and documents effortlessly. Instead of letting PDFs gather dust on your hard drive, ReadEaser analyzes them, breaks them into digestible daily parts, and delivers them straight to your inbox.
+Like many people, I have a large collection of self-help and non-fiction PDF books on my hard drive that I've always wanted to read. I found it difficult to make consistent progress, and the sheer volume was overwhelming. So, I decided to build a solution for myself.
 
-This project transforms reading from a chore into a delightful daily habit, using AI to make every session engaging, motivating, and efficient.
+This project is my personal AI agent that acts as an intelligent reading companion. It takes my library of books and transforms the passive act of reading into an active, daily system for learning and growth. Every morning, it reads with me, helps me understand complex ideas, and ensures the knowledge actually sticks.
 
----
+-----
 
-## ✨ Key Features
+## ✨ My Favorite Features
 
-* **🚀 Daily Digestible Chunks:** ReadEaser automatically partitions large books into smaller, manageable parts. Every day, it sends you the next part of the book, helping you make steady progress without feeling overwhelmed.
+  * **Smart Daily Readings:** Instead of just sending random pages, the agent analyzes a book and splits it into semantically coherent chunks. This means every email I receive contains a complete, self-contained idea, making it much easier to learn.
 
-* **💡 Motivational Hooks & Summaries:** Each daily email starts with a short, AI-generated "motivational hook" to pique your interest, along with a concise summary of the part's key points. You'll know exactly what you're about to read and why it's important.
+  * **Connecting the Dots:** This is the agent's "magic." As I read a new book, it uses a vector database to find related concepts from *all the other books I've ever read*. It then explains the connection, helping me build a latticework of knowledge.
 
-* **👁️ Bionic Reading Integration:** Read faster and with greater focus! The main text in each email is formatted using the bionic reading method, which bolds the initial letters of words to guide your eyes and improve comprehension speed.
+  * **Actionable Takeaways:** Every digest includes a concrete action I can take and a reflective question. This pushes me to not just consume the information, but to actively apply it to my own life.
 
-* **🧠 Complex Word Simplifier:** Don't let difficult vocabulary slow you down. The agent identifies complex words within the daily part and provides simple, easy-to-understand definitions, expanding your knowledge as you read.
+  * **Personal Vocabulary Builder:** The agent identifies advanced words from the text and includes them in the daily email, helping me expand my vocabulary effortlessly as I read.
 
----
+  * **Fully Autonomous:** The entire system runs automatically on a schedule using GitHub Actions. I don't have to do anything except check my email in the morning.
 
-## 🔧 How It Works
+-----
 
-The workflow is designed to be simple and automated:
+## 🔧 How It's Built (The Tech Stack)
 
-1.  **Upload & Analyze:** Start by uploading a PDF book to the application. The agent analyzes the document and programmatically divides it into daily reading chunks.
-2.  **Schedule:** The system schedules a daily job to process the next unread chunk of your book.
-3.  **Receive & Read:** Every day, you receive a beautifully formatted email containing your motivational hook, summary, bionic reading text, and simplified word definitions. Just open, read, and repeat!
+To bring this idea to life, I used a modern, serverless tech stack that is both powerful and extremely cost-effective.
 
-![Demo GIF of the Daily Email](https://i.imgur.com/your-email-demo.gif)
+  * **AI & Embeddings:** Google Gemini (`gemini-1.fum Flash`, `text-embedding-004`)
+  * **Vector Database (Memory):** Pinecone
+  * **Backend & Logic:** Python
+  * **Automation & CI/CD:** GitHub Actions
+  * **Email Delivery:** `smtplib` (via Gmail)
+  * **PDF Processing:** `PyPDF2`
+  * **Text Splitting:** `langchain_text_splitters`
 
----
+-----
 
-## 🛠️ Tech Stack & Future Roadmap
+## 🛣️ Project Status & Future Roadmap
 
-This project leverages a powerful stack to bring your reading to life:
+**Current Status:** The core MVP (Minimum Viable Product) of the Personalized Wisdom Architect is fully operational. The agent can successfully ingest a PDF book, store its knowledge, and deliver automated daily digests with AI-generated insights and synthesis.
 
-* **AI:** `smolagents`, `Ollama` (`llama3:8b`), `litellm`
-* **Backend:** Python, `schedule` (for daily jobs), `smtplib` (for email)
-* **UI:** Gradio
-* **PDF Processing:** PyPDF
+This project is under active development, and I have a clear vision for its future. My goal is to evolve this agent into an even more powerful and interactive learning companion.
 
-> This is just the beginning! Future plans include progress tracking, integration with services like Pocket and Kindle, and even generating audio summaries for you to listen to on the go.
+**What's Next:**
 
----
+* **✨ Interactive UI:** Develop a simple web interface using **Gradio** or **Streamlit** to manage the book library and view progress.
+* **📚 Multi-Book Library:** Add the ability to manage and switch between multiple concurrent books.
+* **📈 Progress Tracking:** Implement a system to track reading streaks and visualize progress through the library.
+* **👁️ Bionic Reading Toggle:** Integrate a feature to turn the Bionic Reading formatting on or off based on user preference.
+* **🎧 Audio Summaries:** Explore generating short, daily audio summaries of the key insights using a text-to-speech API.
 
-## Book Ingestion Script
+----
 
-The project now includes a robust book ingestion script (`ingest_book.py`) that processes PDF books and stores them in a Pinecone vector database for semantic search and retrieval.
+## ⚙️ How to Run Your Own Version
 
-### Setup
+If you'd like to set up your own version of this agent, here’s how.
 
-1. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 1\. Prerequisites
 
-2. **Environment Variables:**
-   Create a `.env` file in the project root with the following variables:
-   ```
-   PINECONE_API_KEY=your_pinecone_api_key_here
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
+  * A GitHub account
+  * Python 3.9+ installed
+  * Accounts for Google (for Gemini API and Gmail) and Pinecone
 
-3. **Pinecone Setup:**
-   - Sign up for Pinecone at https://www.pinecone.io/
-   - Create a new project in the AWS ap-south-1 region
-   - Get your API key from the Pinecone console
+### 2\. Clone the Repository
 
-4. **Google Gemini Setup:**
-   - Get your API key from Google AI Studio: https://makersuite.google.com/app/apikey
+```bash
+git clone https://github.com/ashraful9194/PDF-Reader-Agent.git
+cd PDF-Reader-Agent
+```
 
-### Usage
+### 3\. Install Dependencies
 
-1. **Place your PDF book** in the project directory as `book.pdf` (or modify the path in the script)
+```bash
+pip install -r requirements.txt
+```
 
-2. **Run the ingestion script:**
-   ```bash
-   python ingest_book.py
-   ```
+### 4\. Set Up Secrets & Credentials
 
-The script will:
-- Create a Pinecone index named "wisdom-architect" if it doesn't exist
-- Extract all text from the PDF using PyPDF2
-- Use Gemini AI to create thematic chunks of the content
-- Generate vector embeddings for each chunk using Gemini's embedding model
-- Store the chunks in Pinecone with metadata including book title and chunk number
+You'll need to get three secret keys:
 
-### Features
+  * **`GEMINI_API_KEY`:** From Google AI Studio.
+  * **`PINECONE_API_KEY`:** From your Pinecone project dashboard.
+  * **`GMAIL_APP_PASSWORD`:** A 16-digit App Password from your Google Account security settings.
 
-- **Automatic Index Creation:** Creates Pinecone index with proper specifications for text-embedding-004 model
-- **Thematic Chunking:** Uses AI to intelligently split book content into meaningful chunks
-- **Robust Error Handling:** Includes fallback chunking and comprehensive error handling
-- **Progress Tracking:** Clear console output showing processing progress
-- **Metadata Storage:** Stores rich metadata with each vector for better retrieval
+Create a `.env` file in your project root for **local testing**:
 
-### Output
+```
+GEMINI_API_KEY="your-gemini-key-here"
+PINECONE_API_KEY="your-pinecone-key-here"
+GMAIL_APP_PASSWORD="your16digitapppasswordhere"
+```
 
-The script provides detailed console output including:
-- Index creation status
-- PDF processing progress
-- Chunk creation statistics
-- Upload progress for each chunk
-- Final summary of processed content
+For deployment, add these same keys to your repository's **GitHub Secrets** (`Settings > Secrets and variables > Actions`).
 
----
+### 5\. Configure the Scripts
 
-## ⚙️ Getting Started
+  * In `daily_digest.py`, change the `SENDER_EMAIL` and `RECEIVER_EMAIL` variables to your own Gmail address.
+  * In `ingest.py`, ensure the Pinecone `REGION` variable matches your project's region.
 
-*(This section would be updated to include instructions on configuring email settings.)*
+-----
 
-1.  Clone the repository.
-2.  Set up the Python virtual environment and install dependencies.
-3.  Configure your email credentials in a `.env` file.
-4.  Run the scheduler and the web app.
+## 🚀 Usage
 
----
+### 1\. "Teaching" the Agent a New Book
+
+1.  Place your PDF book in the project directory (e.g., `book.pdf`).
+2.  In `ingest.py`, update the `pdf_path` variable to point to your book's filename.
+3.  Run the script locally: `python ingest.py`.
+
+### 2\. Receiving Daily Digests
+
+1.  Once a book is ingested, the scheduled GitHub Action will run automatically every morning.
+2.  Just check your email for your daily digest\!
+
+-----
 
 ## 🤝 How to Contribute
 
-Contributions are welcome! If you have ideas for new features or improvements, please open an issue or submit a pull request.
+While this is a personal project, I'm open to ideas and contributions\! Feel free to open an issue or submit a pull request.
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
+This project is licensed under the MIT License.
