@@ -5,6 +5,8 @@ import sys
 import unicodedata
 import re
 from email.message import EmailMessage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from email import policy
 from email.header import Header
 from email.utils import formataddr
@@ -73,6 +75,142 @@ def clean_text_for_email(text):
     
     return text
 
+def create_html_email_template(quote, insight, prompt, connection_or_takeaway, chunk_number):
+    """
+    Creates a beautiful HTML email template for the daily digest.
+    """
+    html_template = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Wisdom Digest</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Georgia', serif; background-color: #f8f9fa; color: #333;">
+    <!-- Main Container -->
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 300; letter-spacing: 1px;">
+                📚 Daily Wisdom Digest
+            </h1>
+            <p style="color: #e8eaf6; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">
+                Chapter {chunk_number} • Your Reading Journey Continues
+            </p>
+        </div>
+
+        <!-- Quote Section -->
+        <div style="padding: 40px 30px 30px 30px; border-left: 5px solid #667eea; margin: 0; background-color: #f8f9ff;">
+            <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
+                <span style="font-size: 36px; color: #667eea; line-height: 1; margin-right: 15px;">💡</span>
+                <h2 style="color: #667eea; margin: 0; font-size: 20px; font-weight: 600;">Quote of the Day</h2>
+            </div>
+            <blockquote style="margin: 0; padding: 0; font-style: italic; font-size: 18px; line-height: 1.6; color: #444;">
+                "{quote}"
+            </blockquote>
+        </div>
+
+        <!-- Actionable Insight -->
+        <div style="padding: 30px; background-color: #ffffff;">
+            <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: #4caf50; line-height: 1; margin-right: 15px;">🎯</span>
+                <h2 style="color: #4caf50; margin: 0; font-size: 20px; font-weight: 600;">Actionable Insight</h2>
+            </div>
+            <p style="margin: 0; font-size: 16px; line-height: 1.7; color: #555;">
+                {insight}
+            </p>
+        </div>
+
+        <!-- Reflective Prompt -->
+        <div style="padding: 30px; background-color: #fff8e1; border-top: 3px solid #ffc107;">
+            <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: #ff9800; line-height: 1; margin-right: 15px;">🤔</span>
+                <h2 style="color: #ff9800; margin: 0; font-size: 20px; font-weight: 600;">Reflective Prompt</h2>
+            </div>
+            <p style="margin: 0; font-size: 16px; line-height: 1.7; color: #555; font-style: italic;">
+                {prompt}
+            </p>
+        </div>
+
+        <!-- Connection/Key Takeaway -->
+        <div style="padding: 30px; background-color: #e8f5e8; border-top: 3px solid #2e7d32;">
+            <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: #2e7d32; line-height: 1; margin-right: 15px;">🔗</span>
+                <h2 style="color: #2e7d32; margin: 0; font-size: 20px; font-weight: 600;">Key Connection</h2>
+            </div>
+            <p style="margin: 0; font-size: 16px; line-height: 1.7; color: #555;">
+                {connection_or_takeaway}
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #37474f; padding: 30px; text-align: center;">
+            <p style="color: #b0bec5; margin: 0 0 10px 0; font-size: 14px;">
+                Keep reading, keep growing! 🌱
+            </p>
+            <p style="color: #78909c; margin: 0; font-size: 12px;">
+                Generated with ❤️ by ReadEaser AI • Continue your journey tomorrow
+            </p>
+            <div style="margin-top: 20px;">
+                <div style="display: inline-block; background-color: #667eea; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                    📈 Progress: Chapter {chunk_number}
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Mobile Responsiveness -->
+    <style>
+        @media only screen and (max-width: 600px) {{
+            .container {{ width: 100% !important; }}
+            .padding {{ padding: 20px !important; }}
+            h1 {{ font-size: 24px !important; }}
+            h2 {{ font-size: 18px !important; }}
+        }}
+    </style>
+</body>
+</html>
+"""
+    return html_template
+
+def parse_ai_response(response_text):
+    """
+    Parse the AI response to extract individual sections.
+    """
+    # Clean the response first
+    response_text = clean_text_for_email(response_text)
+    
+    # Initialize sections with defaults
+    sections = {
+        'quote': 'Wisdom comes from within.',
+        'insight': 'Take time today to reflect on what you have learned.',
+        'prompt': 'How can you apply today\'s learning to improve your life?',
+        'connection': 'Every piece of knowledge builds upon the last, creating a foundation for growth.'
+    }
+    
+    try:
+        # Split by common section headers (case insensitive)
+        patterns = {
+            'quote': r'(?:quote of the day|quote)[:\-\s]+(.*?)(?=\n.*?(?:actionable|insight|reflective|key|connecting)|\Z)',
+            'insight': r'(?:actionable insight|insight)[:\-\s]+(.*?)(?=\n.*?(?:reflective|quote|key|connecting)|\Z)',
+            'prompt': r'(?:reflective prompt|prompt)[:\-\s]+(.*?)(?=\n.*?(?:connecting|key|quote|actionable)|\Z)',
+            'connection': r'(?:connecting the dots|key takeaway|connection)[:\-\s]+(.*?)(?=\n.*?(?:quote|actionable|reflective)|\Z)'
+        }
+        
+        for key, pattern in patterns.items():
+            match = re.search(pattern, response_text, re.IGNORECASE | re.DOTALL)
+            if match:
+                sections[key] = match.group(1).strip()
+        
+    except Exception as e:
+        print(f"⚠️ Error parsing AI response: {e}")
+        # Keep default sections if parsing fails
+    
+    return sections
+
 def get_progress():
     """Reads the current chunk number from the progress file."""
     with open(PROGRESS_FILE, 'r') as f:
@@ -83,44 +221,41 @@ def save_progress(progress_data):
     with open(PROGRESS_FILE, 'w') as f:
         json.dump(progress_data, f)
 
-def send_email(subject, body):
-    """Sends the daily digest email using smtplib with robust Unicode handling."""
+def send_html_email(subject, html_content):
+    """Sends a beautiful HTML email using smtplib."""
     try:
-        # Clean the subject and body of problematic Unicode characters
+        # Clean credentials
+        safe_sender_email = clean_text_for_email(SENDER_EMAIL)
+        safe_receiver_email = clean_text_for_email(RECEIVER_EMAIL)
+        safe_gmail_password = clean_text_for_email(GMAIL_APP_PASSWORD)
         safe_subject = clean_text_for_email(subject) or "Your Daily Wisdom Digest"
-        safe_body = clean_text_for_email(body) or "No content available for today."
         
-        print(f"📧 Preparing email with subject: {safe_subject[:50]}...")
+        print(f"📧 Preparing beautiful HTML email...")
         
-        # Create message with plain policy (more compatible)
-        msg = EmailMessage(policy=policy.default)
-        msg["Subject"] = safe_subject
-        msg["From"] = SENDER_EMAIL
-        msg["To"] = RECEIVER_EMAIL
+        # Create multipart message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = safe_subject
+        msg['From'] = safe_sender_email
+        msg['To'] = safe_receiver_email
         
-        # Set content as plain text with explicit charset
-        msg.set_content(safe_body, charset='utf-8')
+        # Create HTML part
+        html_part = MIMEText(html_content, 'html', 'utf-8')
+        msg.attach(html_part)
         
         # Send email
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
-            server.login(SENDER_EMAIL, GMAIL_APP_PASSWORD)
+            server.login(safe_sender_email, safe_gmail_password)
+            server.send_message(msg)
             
-            # Send the message - let smtplib handle the encoding
-            text = msg.as_string()
-            server.sendmail(SENDER_EMAIL, [RECEIVER_EMAIL], text.encode('utf-8'))
-            
-        print("✅ Email sent successfully!")
+        print("✅ Beautiful HTML email sent successfully!")
         
     except Exception as e:
         print(f"❌ Email sending failed: {e}")
         print(f"Subject length: {len(subject) if subject else 0}")
-        print(f"Body length: {len(body) if body else 0}")
-        # Print first 100 chars of body for debugging
-        if body:
-            print(f"Body preview: {repr(body[:100])}")
+        print(f"HTML content length: {len(html_content) if html_content else 0}")
         raise RuntimeError(f"Failed to send email: {e}")
 
 def main():
@@ -202,11 +337,15 @@ Related Concept from the Book:
 {similar_chunk_text}
 ```
 
-Produce these sections (plain text, no markdown formatting beyond headings):
-- Quote of the Day: one powerful sentence from the Main Text
-- Actionable Insight: one concrete action the reader can take today
-- Reflective Prompt: one open-ended question
-- Connecting the Dots: 3-5 sentences explaining the connection between Main Text and Related Concept
+Produce these sections (plain text, no markdown formatting):
+
+Quote of the Day: [Extract one powerful, memorable sentence from the Main Text - keep it under 150 characters]
+
+Actionable Insight: [One concrete, specific action the reader can take today based on the main text - be practical and specific]
+
+Reflective Prompt: [One thought-provoking, open-ended question that encourages deep thinking about the concepts]
+
+Connecting the Dots: [Explain in 3-5 sentences how the Main Text and Related Concept connect and reinforce each other's messages]
 
 Important: Use only standard punctuation marks (', ", -, ...) and avoid special Unicode characters.
 """
@@ -220,25 +359,41 @@ Main Text for Today:
 {current_chunk_text}
 ```
 
-Produce these sections (plain text, no markdown formatting beyond headings):
-- Quote of the Day: one powerful sentence from the Main Text
-- Actionable Insight: one concrete action the reader can take today
-- Reflective Prompt: one open-ended question
-- Key Takeaway: 3-5 sentences summarizing the core idea from the Main Text
+Produce these sections (plain text, no markdown formatting):
+
+Quote of the Day: [Extract one powerful, memorable sentence from the Main Text - keep it under 150 characters]
+
+Actionable Insight: [One concrete, specific action the reader can take today based on the main text - be practical and specific]
+
+Reflective Prompt: [One thought-provoking, open-ended question that encourages deep thinking about the concepts]
+
+Key Takeaway: [Summarize the core idea from the Main Text in 3-5 sentences, focusing on practical wisdom]
 
 Important: Use only standard punctuation marks (', ", -, ...) and avoid special Unicode characters.
 """
         response = generative_model.generate_content(prompt)
-        email_body = response.text
+        ai_response = response.text
         
-        # Clean the generated content as well
-        email_body = clean_text_for_email(email_body)
+        # Clean the generated content
+        ai_response = clean_text_for_email(ai_response)
 
-        # 5. Send the Email
-        email_subject = "Your Daily Wisdom Digest"
-        send_email(email_subject, email_body)
+        # 5. Parse AI Response into sections
+        sections = parse_ai_response(ai_response)
+        
+        # 6. Create Beautiful HTML Email
+        html_content = create_html_email_template(
+            quote=sections['quote'],
+            insight=sections['insight'],
+            prompt=sections['prompt'],
+            connection_or_takeaway=sections['connection'],
+            chunk_number=progress['current_chunk']
+        )
 
-        # 6. Update Progress
+        # 7. Send the Email
+        email_subject = f"Daily Wisdom Digest - Chapter {progress['current_chunk']}"
+        send_html_email(email_subject, html_content)
+
+        # 8. Update Progress
         progress['current_chunk'] += 1
         save_progress(progress)
         print(f"📈 Progress updated. Next chunk will be {progress['current_chunk']}.")
