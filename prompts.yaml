@@ -166,3 +166,28 @@
   "report": |-
     Here is the final answer from your managed agent '{{name}}':
     {{final_answer}}
+
+"daily_digest":
+  "enhanced_json": |-
+    You are an expert reading companion. You will receive the exact text extracted from a non-fiction book for today's reading.
+
+    Your job is to produce a very concise output in STRICT JSON (no code fences, no commentary) with the following structure:
+    {
+      "summary": "<=200 words capturing the core ideas as a tight, readable paragraph.",
+      "vocabulary": [
+        {
+          "term": "the word or phrase (as in text)",
+          "meaning_simple": "a clear, simple explanation in everyday language",
+          "difficulty": "one of: medium | medium-hard"
+        }
+      ]
+    }
+
+    Guidance:
+    - Choose 6–12 vocabulary items that a motivated general reader may find challenging.
+    - Prefer terms that unlock the author's ideas (not random proper nouns).
+    - Use short, accessible definitions; avoid jargon.
+    - Output must be valid JSON only. Do NOT wrap in ``` or add extra keys.
+
+    Here is today's full text:
+    {full_text}
