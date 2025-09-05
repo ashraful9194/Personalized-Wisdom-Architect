@@ -30,6 +30,27 @@ pc = Pinecone(api_key=PINECONE_API_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 generative_model = genai.GenerativeModel('gemini-1.5-flash')
 
+def get_total_chunks_from_pinecone(index) -> int:
+    """Return total number of vectors (chunks) stored in the Pinecone index.
+    Falls back to 0 if unavailable.
+    """
+    try:
+        stats = index.describe_index_stats()
+        # Prefer namespaces sum if available, otherwise total_vector_count
+        if hasattr(stats, "namespaces") and isinstance(stats.namespaces, dict) and stats.namespaces:
+            return sum((ns.get("vector_count", 0) for ns in stats.namespaces.values()))
+        if hasattr(stats, "total_vector_count"):
+            return int(stats.total_vector_count)
+        # Some client versions return dict
+        if isinstance(stats, dict):
+            if "namespaces" in stats and isinstance(stats["namespaces"], dict) and stats["namespaces"]:
+                return sum((ns.get("vector_count", 0) for ns in stats["namespaces"].values()))
+            if "total_vector_count" in stats:
+                return int(stats["total_vector_count"])
+    except Exception:
+        pass
+    return 0
+
 def clean_text_for_email(text):
     """
     Clean text to remove problematic Unicode characters that cause email encoding issues.
@@ -212,13 +233,15 @@ def main():
             subject_range = f"Chapters {start_chunk}-{start_chunk + consumed_chunks - 1}"
 
         # 6. Create Beautiful HTML Email including progress, summary, vocabulary, and full text
-        # Progress bar (requires BOOK_TOTAL_CHUNKS env var). If not provided, show a simple badge.
-        total_chunks_env = os.getenv("BOOK_TOTAL_CHUNKS", "").strip()
-        total_chunks = 0
+        # Determine total chunks automatically from Pinecone (fallback to env if set)
+        auto_total = get_total_chunks_from_pinecone(index)
+        env_total = 0
         try:
-            total_chunks = int(total_chunks_env) if total_chunks_env else 0
+            env_val = os.getenv("BOOK_TOTAL_CHUNKS", "").strip()
+            env_total = int(env_val) if env_val else 0
         except Exception:
-            total_chunks = 0
+            env_total = 0
+        total_chunks = env_total or auto_total
 
         end_chunk = start_chunk + consumed_chunks - 1
         if total_chunks > 0 and end_chunk <= total_chunks:
