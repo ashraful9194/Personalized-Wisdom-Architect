@@ -13,7 +13,7 @@ load_dotenv()
 # --- Configuration ---
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-INDEX_NAME = "wisdom-architect"
+INDEX_NAME = "how-to-win-friends-and-influence-people"
 CLOUD = "aws"
 REGION = "us-east-1" # Common AWS region
 
@@ -24,20 +24,27 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 def check_and_create_index():
     """Check if the Pinecone index exists and create it if it doesn't."""
-    if INDEX_NAME not in pc.list_indexes().names():
-        print(f"Creating index '{INDEX_NAME}'...")
-        pc.create_index(
-            name=INDEX_NAME,
-            dimension=768,  # Dimension for text-embedding-004
-            metric="cosine",
-            spec=ServerlessSpec(cloud=CLOUD, region=REGION)
-        )
-        print("Waiting for index to become ready...")
-        while not pc.describe_index(INDEX_NAME).status['ready']:
-            time.sleep(5)
-        print(f"✅ Index '{INDEX_NAME}' is ready!")
-    else:
-        print(f"✅ Index '{INDEX_NAME}' already exists.")
+    # Always recreate the index: delete if it exists, then create fresh
+    existing = pc.list_indexes().names()
+    if INDEX_NAME in existing:
+        print(f"🗑️ Deleting existing index '{INDEX_NAME}'...")
+        pc.delete_index(INDEX_NAME)
+        # Wait until deletion is reflected
+        while INDEX_NAME in pc.list_indexes().names():
+            time.sleep(2)
+        print(f"✅ Deleted '{INDEX_NAME}'.")
+
+    print(f"Creating index '{INDEX_NAME}'...")
+    pc.create_index(
+        name=INDEX_NAME,
+        dimension=768,  # Dimension for text-embedding-004
+        metric="cosine",
+        spec=ServerlessSpec(cloud=CLOUD, region=REGION)
+    )
+    print("Waiting for index to become ready...")
+    while not pc.describe_index(INDEX_NAME).status['ready']:
+        time.sleep(5)
+    print(f"✅ Index '{INDEX_NAME}' is ready!")
     return pc.Index(INDEX_NAME)
 
 def extract_pdf_text(pdf_path: str) -> str:
@@ -58,35 +65,36 @@ def extract_pdf_text(pdf_path: str) -> str:
         print(f"❌ Error extracting PDF text: {e}")
         raise
 
-def create_thematic_chunks(full_text: str) -> list:
-    """Create chunks using recursive splitting (no LLM; cost-free).
-
-    Strategy:
-    - Prefer natural boundaries first (page markers, blank lines, sentences, spaces)
-    - Target chunk size ~1200 chars with 150-char overlap for better retrieval
+def create_chunks_by_page_count(full_text: str, pages_per_chunk: int = 10) -> list[str]:
     """
-    print("🧠 Creating chunks using RecursiveCharacterTextSplitter...")
+    Groups the text of a book into larger chunks based on a set number of pages.
+    This is ideal for sequential reading, like daily emails.
+    """
+    print(f"🧠 Grouping text into chunks of {pages_per_chunk} pages...")
 
-    # Split first on explicit page markers to keep coherence across pages
-    pages = [p.strip() for p in full_text.split("\n\n---PAGE ") if p.strip()]
+    # 1. Split the entire text by the unique page marker.
+    # The first element will be empty due to the split, so we skip it `[1:]`.
+    pages = full_text.split("\n\n---PAGE ")[1:]
     if not pages:
-        pages = [full_text]
+        print("❌ No pages found. Check the PDF extraction and page markers.")
+        return []
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1200,
-        chunk_overlap=150,
-        separators=["\n\n", "\n", ". ", " ", ""],
-    )
+    # 2. Group the extracted pages into batches of `pages_per_chunk`.
+    chunks = []
+    for i in range(0, len(pages), pages_per_chunk):
+        # Get a batch of 15 pages
+        page_batch = pages[i:i + pages_per_chunk]
 
-    chunks: list[str] = []
-    for page_block in pages:
-        # Remove any residual page marker header like "X---" if present
-        cleaned = page_block
-        if "---\n\n" in cleaned:
-            cleaned = cleaned.split("---\n\n", 1)[-1]
-        chunks.extend(splitter.split_text(cleaned))
+        # 3. Join the text of this batch back together into a single chunk.
+        # We'll re-add the page markers for clarity in the final text.
+        chunk_content = ""
+        for page_text in page_batch:
+             # The page_text looks like "1---\n\nActual text...", so we add the marker back.
+            chunk_content += f"\n\n---PAGE {page_text}"
 
-    print(f"✅ Created {len(chunks)} chunks (recursive, no LLM).")
+        chunks.append(chunk_content.strip())
+
+    print(f"✅ Created {len(chunks)} chunks, each containing up to {pages_per_chunk} pages.")
     return chunks
 
 def get_text_embedding(text: str) -> list:
@@ -110,13 +118,13 @@ def main():
     print("🚀 Starting book ingestion process...")
     try:
         index = check_and_create_index()
-        pdf_path = "book.pdf"
+        pdf_path = "book2.pdf"
         
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"'{pdf_path}' not found. Please place your book in the same folder.")
             
         full_text = extract_pdf_text(pdf_path)
-        chunks = create_thematic_chunks(full_text)
+        chunks = create_chunks_by_page_count(full_text, pages_per_chunk=10)
 
         print(f"📊 Preparing to upload {len(chunks)} chunks to Pinecone...")
         batch_size = 100 # Process in batches for efficiency

@@ -19,10 +19,10 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 
-SENDER_EMAIL = "ashraful9194@gmail.com"  # <-- IMPORTANT: Change to your email
+SENDER_EMAIL = "ashraful9194@gmail.com"  # <-- šMPORTANT: Change to your email
 RECEIVER_EMAIL = "ashraful9194@gmail.com" # <-- IMPORTANT: Change to your email
 
-INDEX_NAME = "wisdom-architect"
+INDEX_NAME = "how-to-win-friends-and-influence-people"
 PROGRESS_FILE = "progress.json"
 
 # --- Initialize Clients ---
@@ -151,9 +151,9 @@ def main():
         start_chunk = progress['current_chunk']
         print(f"📌 Reading progress: Start chunk is {start_chunk}")
 
-        # 2. Fetch Data from Pinecone: gather up to 5 consecutive valid chunks
+        # 2. Fetch Data from Pinecone: gather up to 1 consecutive valid chunks
         index = pc.Index(INDEX_NAME)
-        desired_chunks = 5
+        desired_chunks = 1
         gathered_texts = []
         gathered_vectors = []
 
