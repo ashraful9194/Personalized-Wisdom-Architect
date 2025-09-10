@@ -10,6 +10,10 @@ from dotenv import load_dotenv
 import yaml
 import google.generativeai as genai
 from pinecone import Pinecone
+import webbrowser
+from datetime import datetime
+from pathlib import Path
+import html
 
 # --- Load Environment Variables ---
 load_dotenv()
@@ -29,27 +33,6 @@ PROGRESS_FILE = "progress.json"
 pc = Pinecone(api_key=PINECONE_API_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 generative_model = genai.GenerativeModel('gemini-1.5-flash')
-
-def get_total_chunks_from_pinecone(index) -> int:
-    """Return total number of vectors (chunks) stored in the Pinecone index.
-    Falls back to 0 if unavailable.
-    """
-    try:
-        stats = index.describe_index_stats()
-        # Prefer namespaces sum if available, otherwise total_vector_count
-        if hasattr(stats, "namespaces") and isinstance(stats.namespaces, dict) and stats.namespaces:
-            return sum((ns.get("vector_count", 0) for ns in stats.namespaces.values()))
-        if hasattr(stats, "total_vector_count"):
-            return int(stats.total_vector_count)
-        # Some client versions return dict
-        if isinstance(stats, dict):
-            if "namespaces" in stats and isinstance(stats["namespaces"], dict) and stats["namespaces"]:
-                return sum((ns.get("vector_count", 0) for ns in stats["namespaces"].values()))
-            if "total_vector_count" in stats:
-                return int(stats["total_vector_count"])
-    except Exception:
-        pass
-    return 0
 
 def clean_text_for_email(text):
     """
@@ -151,6 +134,64 @@ def main():
         start_chunk = progress['current_chunk']
         print(f"📌 Reading progress: Start chunk is {start_chunk}")
 
+        # Early exit: if we've completed the book, send a colorful congrats email and stop
+        total_chunks = 0
+        try:
+            total_chunks = int(progress.get("total_chunks", 0))
+        except Exception:
+            total_chunks = 0
+        if not total_chunks:
+            try:
+                env_val = os.getenv("BOOK_TOTAL_CHUNKS", "").strip()
+                total_chunks = int(env_val) if env_val else 0
+            except Exception:
+                total_chunks = 0
+
+        if total_chunks and start_chunk >= total_chunks:
+            subject = "🎉 Congratulations! You finished your book"
+            congrats_html = f"""
+            <!DOCTYPE html>
+            <html lang='en'>
+            <head>
+              <meta charset='utf-8'/>
+              <meta name='viewport' content='width=device-width, initial-scale=1'/>
+              <title>Congratulations</title>
+            </head>
+            <body style="margin:0; padding:0; background:linear-gradient(160deg,#fdf2f8,#eef2ff); font-family: Tahoma, Geneva, sans-serif;">
+              <div style="max-width:720px; margin:22px auto; background:#ffffff; border-radius:14px; box-shadow:0 12px 32px rgba(0,0,0,0.07); overflow:hidden;">
+                <div style="padding:28px; background:linear-gradient(135deg,#22c55e,#16a34a); color:white;">
+                  <h1 style="margin:0; font-size:24px; font-weight:800; letter-spacing:0.2px;">You Did It! 🎓📚</h1>
+                  <div style="opacity:0.95; margin-top:6px; font-size:14px;">Completed {total_chunks} chapters</div>
+                </div>
+                <div style="padding:22px 26px;">
+                  <p style="margin:0 0 12px 0; font-size:16px; line-height:1.7;">
+                    Congratulations on finishing your book! This is a milestone worth celebrating. Your dedication to
+                    daily, focused reading is exactly how deep knowledge compounds over time. 🎉
+                  </p>
+                  <p style="margin:0 0 16px 0; font-size:16px; line-height:1.7;">
+                    Ready for your next journey? Upload a new book and keep the momentum going. I’ll continue sending
+                    you clear summaries, key vocabulary, and your progress—beautifully visualized.
+                  </p>
+                  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+                    <span style="display:inline-block; background:#eef2ff; color:#4338ca; padding:8px 12px; border-radius:999px; font-weight:600; font-size:12px;">Curiosity</span>
+                    <span style="display:inline-block; background:#ecfeff; color:#0e7490; padding:8px 12px; border-radius:999px; font-weight:600; font-size:12px;">Consistency</span>
+                    <span style="display:inline-block; background:#ecfccb; color:#3f6212; padding:8px 12px; border-radius:999px; font-weight:600; font-size:12px;">Growth</span>
+                  </div>
+                  <div style="margin-top:20px;">
+                    <a href="#upload" style="text-decoration:none;">
+                      <div style="display:inline-block; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; padding:12px 18px; border-radius:12px; font-weight:700; box-shadow:0 6px 18px rgba(99,102,241,0.35);">Upload a new book →</div>
+                    </a>
+                  </div>
+                </div>
+                <div style="padding:16px 26px; background:#f9fafb; color:#6b7280; font-size:12px; text-align:center;">Keep learning. Keep building. 🌱</div>
+              </div>
+            </body>
+            </html>
+            """
+            send_html_email(subject, congrats_html)
+            print("🎉 Completion email sent. No more chunks to process.")
+            return
+
         # 2. Fetch Data from Pinecone: gather up to 1 consecutive valid chunks
         index = pc.Index(INDEX_NAME)
         desired_chunks = 1
@@ -233,17 +274,18 @@ def main():
             subject_range = f"Chapters {start_chunk}-{start_chunk + consumed_chunks - 1}"
 
         # 6. Create Beautiful HTML Email including progress, summary, vocabulary, and full text
-        # Determine total chunks automatically from Pinecone (fallback to env if set)
-        auto_total = get_total_chunks_from_pinecone(index)
-        env_total = 0
+        # Determine total chunks: prefer progress.json, then env, then Pinecone stats
+        file_total = 0
         try:
-            env_val = os.getenv("BOOK_TOTAL_CHUNKS", "").strip()
-            env_total = int(env_val) if env_val else 0
+            with open(PROGRESS_FILE, "r") as pf:
+                pdata = json.load(pf) or {}
+                file_total = int(pdata.get("total_chunks", 0))
         except Exception:
-            env_total = 0
-        total_chunks = env_total or auto_total
+            file_total = 0
 
-        end_chunk = start_chunk + consumed_chunks - 1
+        total_chunks = file_total
+
+        end_chunk = start_chunk + consumed_chunks
         if total_chunks > 0 and end_chunk <= total_chunks:
             percent = max(0, min(100, round((end_chunk / total_chunks) * 100)))
             progress_html = f"""
@@ -291,7 +333,65 @@ def main():
             </table>
             """
 
-        full_text_html = current_chunk_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
+        def bionicize_text_to_html(text: str) -> str:
+            if not text:
+                return ""
+            out_parts = []
+            token = []
+            def flush_token():
+                if not token:
+                    return
+                word = "".join(token)
+                # Determine prefix length based on word length
+                letters = [ch for ch in word]
+                word_len = len(letters)
+                if word_len <= 3:
+                    pre = word_len
+                elif word_len <= 7:
+                    pre = 2
+                elif word_len <= 12:
+                    pre = 3
+                else:
+                    pre = 4
+                pre = min(pre, word_len)
+                prefix = html.escape(word[:pre])
+                suffix = html.escape(word[pre:])
+                out_parts.append(f"<strong style='color:#232323'>{prefix}</strong>{suffix}")
+                token.clear()
+
+            for ch in text:
+                if ch.isalnum():
+                    token.append(ch)
+                else:
+                    flush_token()
+                    if ch == "\n":
+                        out_parts.append("<br/>")
+                    else:
+                        out_parts.append(html.escape(ch))
+            flush_token()
+            return "".join(out_parts)
+
+        # Build full text HTML with optional Bionic Reading and page-per-paragraph rendering
+        def build_full_text_html(raw_text: str) -> str:
+            use_bionic = (os.getenv("BIONIC_READING", "").strip().lower() in ("1", "true", "yes"))
+            # Split on page markers regardless of surrounding whitespace: "---PAGE 12---"
+            import re as _re
+            parts = _re.split(r"\s*---PAGE\s+\d+---\s*", raw_text)
+            # Sometimes text starts with an empty part due to leading marker
+            pages = [p for p in parts if p and p.strip()]
+            if not pages:
+                # No markers found; treat entire text as a single page
+                pages = [raw_text]
+            rendered = []
+            for page_text in pages:
+                if use_bionic:
+                    body = bionicize_text_to_html(page_text)
+                else:
+                    body = html.escape(page_text).replace("\n", "<br/>")
+                rendered.append(f"<p style='margin:0 0 14px 0; line-height:1.7;'>{body}</p>")
+            return "".join(rendered)
+
+        full_text_html = build_full_text_html(current_chunk_text)
         summary_html = (summary_text or "No summary generated today.").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", " ")
         vocab_html = render_vocab_html(vocabulary_items)
 
@@ -303,9 +403,9 @@ def main():
           <meta name="viewport" content="width=device-width, initial-scale=1"/>
           <title>Daily Wisdom Digest</title>
         </head>
-        <body style="margin:0; padding:0; background:#f6f7fb; color:#333; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';">
-          <div style="max-width:720px; margin:0 auto; background:#fff; box-shadow:0 6px 24px rgba(0,0,0,0.08);">
-            <div style="padding:24px 28px; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff;">
+        <body style="margin:0; padding:0; background:#191512; color:#333; font-family: 'Century Gothic', AppleGothic, sans-serif;">
+          <div style="max-width:720px; margin:0 auto; background:#C0A062; box-shadow:0 6px 24px rgba(0,0,0,0.08);">
+            <div style="padding:24px 28px; background:#232323; color:#fff;">
               <h1 style="margin:0; font-size:22px; font-weight:600;">Daily Wisdom Digest</h1>
               <div style="opacity:0.9; font-size:14px; margin-top:6px;">{subject_range}</div>
             </div>
@@ -324,12 +424,34 @@ def main():
         </html>
         """
 
-        # 7. Send the Email
+        # 7. Preview-only mode: save HTML and open in browser; skip sending and progress update
         if consumed_chunks == 1:
             subject_range = f"Chapter {start_chunk}"
         else:
             subject_range = f"Chapters {start_chunk}-{start_chunk + consumed_chunks - 1}"
         email_subject = f"Daily Wisdom Digest - {subject_range}"
+
+        preview_flag = (os.getenv("PREVIEW_ONLY", "").strip().lower() in ("1", "true", "yes"))
+        if preview_flag:
+            out_dir = Path("outbox")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            out_file = out_dir / f"digest-{timestamp}.html"
+            latest_file = out_dir / "latest.html"
+            try:
+                out_file.write_text(html_content, encoding="utf-8")
+                latest_file.write_text(html_content, encoding="utf-8")
+                print(f"👀 Preview saved: {out_file}")
+                try:
+                    webbrowser.open(latest_file.resolve().as_uri())
+                except Exception:
+                    pass
+                print("ℹ️ PREVIEW_ONLY is enabled. Skipping email send and progress update.")
+                return
+            except Exception as e:
+                print(f"⚠️ Failed to write preview file: {e}. Proceeding to send email.")
+
+        # Normal flow: send email
         send_html_email(email_subject, html_content)
 
         # 8. Update Progress (advance by number of consumed chunks)

@@ -127,6 +127,25 @@ def main():
         chunks = create_chunks_by_page_count(full_text, pages_per_chunk=10)
 
         print(f"📊 Preparing to upload {len(chunks)} chunks to Pinecone...")
+        # Persist total chunks to progress.json for downstream use
+        try:
+            progress_path = "progress.json"
+            current_progress = {}
+            if os.path.exists(progress_path):
+                with open(progress_path, "r") as pf:
+                    try:
+                        current_progress = json.load(pf) or {}
+                    except Exception:
+                        current_progress = {}
+            current_chunk_value = int(current_progress.get("current_chunk", 0))
+            with open(progress_path, "w") as pf:
+                json.dump({
+                    "current_chunk": current_chunk_value,
+                    "total_chunks": len(chunks)
+                }, pf)
+            print(f"📝 Saved total_chunks={len(chunks)} to progress.json")
+        except Exception as e:
+            print(f"⚠️ Could not update progress.json with total_chunks: {e}")
         batch_size = 100 # Process in batches for efficiency
         for i in range(0, len(chunks), batch_size):
             batch_chunks = chunks[i:i + batch_size]
