@@ -1,6 +1,6 @@
 # 🧠 My Personalized Wisdom Architect
 
-![Status: MVP Operational](https://img.shields.io/badge/status-MVP_Operational-brightgreen) ![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg) ![Automation](https://img.shields.io/github/actions/workflow/status/ashraful9194/PDF-Reader-Agent/daily_digest.yml?label=Daily%20Digest&style=flat-square) ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Status: Operational](https://img.shields.io/badge/status-MVP_Operational-brightgreen) ![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg) ![Automation](https://img.shields.io/github/actions/workflow/status/ashraful9194/PDF-Reader-Agent/daily_digest.yml?label=Daily%20Digest&style=flat-square) ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 ### Why I Built This
 
