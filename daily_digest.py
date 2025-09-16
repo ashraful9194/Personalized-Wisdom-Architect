@@ -310,6 +310,7 @@ def main():
                 return "<p>No vocabulary items identified today.</p>"
             rows = []
             for it in items:
+                print(it)
                 term = str(it.get("term", "")).strip()
                 meaning = str(it.get("meaning_simple", "")).strip()
                 difficulty = str(it.get("difficulty", "")).strip()
