@@ -20,7 +20,8 @@ load_dotenv()
 
 # --- Configuration ---
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Prefer GOOGLE_API_KEY but fall back to GEMINI_API_KEY; you mentioned you set GEMINI_API_KEY
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 
 SENDER_EMAIL = "ashraful9194@gmail.com"  # <-- šMPORTANT: Change to your email
@@ -31,8 +32,22 @@ PROGRESS_FILE = "progress.json"
 
 # --- Initialize Clients ---
 pc = Pinecone(api_key=PINECONE_API_KEY)
+if not GEMINI_API_KEY:
+    raise RuntimeError("Missing Gemini API key. Set env var GEMINI_API_KEY or GOOGLE_API_KEY.")
 genai.configure(api_key=GEMINI_API_KEY)
-generative_model = genai.GenerativeModel('gemini-1.5-flash')
+
+# Resolve a working Gemini model for generate_content
+def _resolve_gemini_model_id() -> str:
+    # Respect explicit override if provided
+    explicit = (os.getenv("`GEMINI_MODEL_ID`", "").strip())
+    if explicit:
+        return explicit
+    # Default to a fully-qualified model name known to support generateContent on v1beta
+    return "gemini-flash-latest"
+
+GEMINI_MODEL_ID = _resolve_gemini_model_id()
+print(f"ℹ️ Using Gemini model: {GEMINI_MODEL_ID}")
+generative_model = genai.GenerativeModel(GEMINI_MODEL_ID)
 
 def clean_text_for_email(text):
     """
