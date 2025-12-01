@@ -118,7 +118,7 @@ def main():
     print("🚀 Starting book ingestion process...")
     try:
         index = check_and_create_index()
-        pdf_path = "book2.pdf"
+        pdf_path = "book.pdf"
         
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"'{pdf_path}' not found. Please place your book in the same folder.")

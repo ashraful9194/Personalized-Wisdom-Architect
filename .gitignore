@@ -33,3 +33,6 @@ nohup.out
 
 # Node (if any subtools)
 node_modules/
+
+# Outbox
+outbox/
